@@ -6,7 +6,21 @@ import pdfFonts from "pdfmake/build/vfs_fonts";
 function Practice() {
     const [pdfUrl, setPdfUrl] = useState(null);
 
-    const inputObject ={
+    const toDataURL = (url, callback) => {
+        let xhr = new XMLHttpRequest();
+        xhr.onload = function () {
+            let reader = new FileReader();
+            reader.onloadend = function () {
+                callback(reader.result);
+            };
+            reader.readAsDataURL(xhr.response);
+        };
+        xhr.open("GET", url);
+        xhr.responseType = "blob";
+        xhr.send();
+    };
+
+    const inputObject = {
         "patientData": {
             "_id": "677a75eb18f1316d56dd33f6",
             "displayId": "KC-BU-2024-PT1000002",
@@ -548,149 +562,186 @@ function Practice() {
             "treatmentData3": []
         }
     }
-    
+
+
+
 
     const createPdf = () => {
-        const docDefinition = {
-            pageSize: "A4",
-            pageMargins: [40, 200, 40, 40], // Increased top margin to fit the header
-            background: function () {
-                return {
-                    canvas: [
-                        {
-                            type: "rect",
-                            x: 10,
-                            y: 10,
-                            w: 575, // Width of the border
-                            h: 822, // Height of the border (A4 full height)
-                            lineWidth: 0.5, // Thickness of the border
-                        },
-                    ],
-                };
-            },
+        const imageUrl = "https://cdn.thebrandingjournal.com/wp-content/uploads/2019/05/chanel_logo_the_branding_journal.jpg";
     
-            header: function (currentPage, pageCount) {
-                return [
-                    {
-                        margin: [40, 20, 40, 20],
-                        stack: [
-                            {
-                                columns: [
-                                    {
-                                        stack: [
-                                            {
-                                                text: [
-                                                    { text: "Prescription No: ", style: "subHeader" },
-                                                    { text: inputObject.prescription.displayId, style: "prescriptionNoValue" },
-                                                ],
-                                            },
-                                            {
-                                                text: [
-                                                    { text: "Case ID: ", style: "subHeader" },
-                                                    { text: inputObject.prescription.caseSheetId, style: "caseIdValue" },
-                                                ],
-                                            },
-
-
-                                        ],
-                                        width: "50%",
-                                    },
-                                    {
-                                        text: `Address: ${inputObject.branch.address}\nContact: ${inputObject.branch.contactNumber}\nEmail: ${inputObject.branch.emailContact}`,
-                                        width: "50%",
-                                        alignment: "right",
-                                        style: "subHeader",
-                                    },
-                                ],
-                            },
-                            { text: "Doc3\nDuty Doctor", style: "header1", margin: [0, 15, 0, 15] },
-                            {
-                                canvas: [{ type: "line", x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1, dash: { length: 2,space:2 },color:"#FFD700" }],
-                                margin: [0, 5, 0, 2],
-                            },
-                            {
-                                columns: [
-
-                                    {
-                                        text: `Patient: ${inputObject.patientData.firstName} ${inputObject.patientData.lastName} | Gender: ${inputObject.patientData.gender} | Blood Group: ${inputObject.patientData.bloodGroup} | Age: ${inputObject.patientData.age} Yrs`,
-                                        width: "70%",
-                                        style: "subHeader",
-                                    },
-
-                                    {
-                                        text: `Date: 2025-02-10 | Time: 06:03 am`,
-                                        width: "30%",
-                                        alignment: "right",
-                                        style: "subHeader",
-                                    },
-
-                                ],
-                            },
-                            {
-                                canvas: [{ type: "line", x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1, dash: { length: 2,space:2 },color:"#FFD700" }],
-                                margin: [0, 2, 0, 2],
-                            },
-                        ],
-                    },
-                ];
-            },
-            content: [
-                { text: "Medicine (Rx)", style: "header2", margin: [3, 2, 0, 5] },
+        toDataURL(imageUrl, function (base64Image) {
+            // If no medicine data is available, stop PDF generation
+            if (!inputObject.prescription.drugArray || inputObject.prescription.drugArray.length === 0) {
+                alert("No data available to generate PDF.");
+                return;
+            }
+    
+            const contentArray = [
+                { text: "Medicine (Rx)", style: "header2", margin: [3, 0, 0, 2] },
                 ...inputObject.prescription.drugArray.map((med, index) => ({
                     text: `${index + 1}. ${med.drugName} ----------- ${med.dosage} Tablets\n${med.dosage} Tablets x ${med.timing} ------------ ${med.freequency} ----------- ${med.duration} Days`,
                     style: "item",
-                    margin: [3, 5, 0, 5],
+                    margin: [3, 5, 0, 15],
                 })),
-
-            ],
-
-            // content: [
-            //     { text: "Medicine (Rx)", style: "header2", margin: [3, 2, 0, 5] },
-            //     ...inputObject.prescription.drugArray.map((med, index) => ({
-            //         margin: [3, 5, 0, 5],
-            //         columns: [
-            //             {
-            //                 width: "30%", // Column for medicine name
-            //                 text: `${index + 1}. ${med.drugName}`,
-            //                 style: "item",
-            //             },
-            //             {
-            //                 width: "70%", // Column for dosage & details (aligned properly)
-            //                 text: `${med.dosage} Tablets\n${med.dosage} Tablets x ${med.timing} -------- ${med.freequency} -------- ${med.duration} Days`,
-            //                 style: "item",
-            //             },
-            //         ],
-            //     })),
-            // ],
-            
-
-            styles: {
-                header: { fontSize: 18, bold: true, margin: [0, 10, 0, 10] },
-                subHeader: { fontSize: 8, margin: [0, 5, 0, 5] },
-                item: { fontSize: 8, margin: [0, 5, 0, 5] },
-                prescriptionNoValue: { fontSize: 8, bold: true, color: "#00ACC1" },
-                caseIdValue: { fontSize: 8, bold: true, color: "#00ACC1" },
-                header1: { fontSize: 12, bold: true, color: "#00ACC1" },
-                header2: { fontSize: 18, bold: true, color: "#00ACC1" },
-                footerStyle:{margin:[0,0,15,0]}
-            },
-            footer: function (currentPage, pageCount) {
-                return {
-                    text: `Page ${currentPage} of ${pageCount}`,
-                    alignment:"right",
-                    style: "footerStyle",
-                };
-            },
-
-
-        };
-
-        pdfMake.createPdf(docDefinition).getBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            setPdfUrl(url);
+            ];
+    
+            const docDefinition = {
+                pageSize: "A4",
+                pageMargins: [40, 180, 40, 40],
+    
+                background: function () {
+                    return {
+                        canvas: [
+                            {
+                                type: "rect",
+                                x: 10,
+                                y: 10,
+                                w: 575,
+                                h: 822,
+                                lineWidth: 0.1,
+                                r: 8,
+                            },
+                        ],
+                    };
+                },
+    
+                header: function (currentPage, pageCount) {
+                    return [
+                        {
+                            margin: [40, 20, 40, 5],
+                            stack: [
+                                {
+                                    columns: [
+                                        {
+                                            stack: [
+                                                {
+                                                    text: [
+                                                        { text: "Prescription No: ", style: "subHeader" },
+                                                        { text: inputObject.prescription.displayId, style: "prescriptionNoValue" },
+                                                    ],
+                                                    margin: [0, 12, 0, 0]
+                                                },
+                                                {
+                                                    text: [
+                                                        { text: "Case ID: ", style: "subHeader" },
+                                                        { text: inputObject.patientData.displayId, style: "caseIdValue" },
+                                                    ],
+                                                    margin: [0, 5, 0, 0]
+                                                },
+                                            ],
+                                            width: "50%",
+                                        },
+                                        {
+                                            stack: [
+                                                {
+                                                    image: base64Image,
+                                                    fit: [80, 50],
+                                                    alignment: "right",
+                                                    margin: [0, 0, 0, 5],
+                                                },
+                                            ],
+                                            width: "50%",
+                                        },
+                                    ],
+                                },
+                                {
+                                    columns: [
+                                        {
+                                            stack: [
+                                                { text: "Doc3" },
+                                                { text: "Duty Doctor", margin: [0, 3, 0, 0] }
+                                            ],
+                                            width: "50%",
+                                            style: "header1"
+                                        },
+                                        {
+                                            stack: [
+                                                {
+                                                    text: [
+                                                        { text: "Address:", bold: true },
+                                                        { text: inputObject.branch.address },
+                                                    ]
+                                                },
+                                                {
+                                                    text: [
+                                                        { text: "Contact:", bold: true, margin: [0, 3, 0, 0] },
+                                                        { text: inputObject.branch.contactNumber },
+                                                    ]
+                                                },
+                                                {
+                                                    text: [
+                                                        { text: "Email:", bold: true, margin: [0, 3, 0, 0] },
+                                                        { text: inputObject.branch.emailContact }
+                                                    ]
+                                                },
+                                            ],
+                                            alignment: "right",
+                                            style: "addressHeader",
+                                            width: "50%",
+                                        },
+                                    ],
+                                    margin: [0, 5, 0, 5],
+                                },
+                                {
+                                    canvas: [{ type: "line", x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1, dash: { length: 2, space: 2 }, color: "#FFD700" }],
+                                    margin: [0, 5, 0, 2],
+                                },
+                                {
+                                    columns: [
+                                        {
+                                            text: `Patient: ${inputObject.patientData.firstName} ${inputObject.patientData.lastName} | Gender: ${inputObject.patientData.gender} | Blood Group: ${inputObject.patientData.bloodGroup} | Age: ${inputObject.patientData.age} Yrs`,
+                                            width: "70%",
+                                            style: "patientHeader",
+                                        },
+                                        {
+                                            text: `Date: 2025-02-10 | Time: 06:03 am`,
+                                            width: "30%",
+                                            alignment: "right",
+                                            style: "patientHeader",
+                                        },
+                                    ],
+                                },
+                                {
+                                    canvas: [{ type: "line", x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1, dash: { length: 2, space: 2 }, color: "#FFD700" }],
+                                    margin: [0, 2, 0, 2],
+                                },
+                            ],
+                        },
+                    ];
+                },
+    
+                content: contentArray,
+    
+                styles: {
+                    header: { fontSize: 18, bold: true, margin: [0, 10, 0, 10] },
+                    subHeader: { fontSize: 12, margin: [0, 5, 0, 5] },
+                    addressHeader: { fontSize: 8 },
+                    item: { fontSize: 8, margin: [0, 5, 0, 15] },
+                    prescriptionNoValue: { fontSize: 8, bold: true, color: "#00ACC1" },
+                    caseIdValue: { fontSize: 8, bold: true, color: "#00ACC1" },
+                    patientHeader: { fontSize: 10, margin: [0, 5, 0, 5] },
+                    header1: { fontSize: 12, bold: true, color: "#00ACC1" },
+                    header2: { fontSize: 18, bold: true, color: "#00ACC1" },
+                },
+    
+                footer: function (currentPage, pageCount) {
+                    return {
+                        text: `Page ${currentPage} of ${pageCount}`,
+                        alignment: "right",
+                        fontSize: 10,
+                        margin: [0, 5, 15, 20]
+                    };
+                },
+            };
+    
+            pdfMake.createPdf(docDefinition).getBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                setPdfUrl(url);
+            });
         });
     };
-
+    
+    
     return (
         <>
             <button onClick={createPdf} className="btn btn-primary mt-3">
